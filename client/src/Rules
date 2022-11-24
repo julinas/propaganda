@@ -1,0 +1,16 @@
+// Rule: indoctrination decreases over time except for people with over 75/100 indoctrination. 
+
+// Rule: more indoctrinated people are more likely to be affected by "praise the party", and gain more indoctrination if affected.
+
+// Rule: "praise the party" becomes less effective if used too frequently (once per day); each subsequent "praise the party" is only 50% less effective. 
+
+
+
+# TODO Should each BigPerson have an independent memory? 
+# TODO Rule: gov increasingly unwilling to do anything to prosecute crimes, be efficient, or help with natural disasters. (makes the game increasingly harder! ...let's not try to explain why an auth gov would do this.)
+
+// types of events:
+// player actions
+// world events 
+// stats-triggered events
+// periodic events (e.g. indoctrination erodes)
