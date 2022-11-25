@@ -2,22 +2,27 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
+from datetime import datetime
+
 # language model imports 
 import tensorflow as tf 
-from transformers import TFAutoModelForSeq2SeqLM, TFAutoModelForSequenceClassification, AutoTokenizer
-from transformers import pipeline
+from transformers import TFAutoModelForSeq2SeqLM, TFAutoModelForSequenceClassification, TFAutoModelForCausalLM, AutoTokenizer
+from transformers import pipeline, set_seed
 
 
 summary_model = TFAutoModelForSeq2SeqLM.from_pretrained("facebook/bart-large-cnn")
 summary_tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large-cnn")
 
 sentiment_classifier = pipeline("sentiment-analysis")
+summary_maker = pipeline("summarization")
 
 paraphrase_model = TFAutoModelForSequenceClassification.from_pretrained("bert-base-cased-finetuned-mrpc")
 paraphrase_tokenizer = AutoTokenizer.from_pretrained("bert-base-cased-finetuned-mrpc")
 
+gpt_model = pipeline("text-generation", model='gpt2')
+
 # configuration
-DEBUG = True
+DEBUG = False
 
 # instantiate the app
 app = Flask(__name__)
@@ -26,17 +31,22 @@ app.config.from_object(__name__)
 # enable CORS
 CORS(app, resources={r'/*': {'origins': '*'}})
 
+print("initialization complete")
+
 # sanity check route
 @app.route('/summary', methods=['GET'])
 def summary(): 
 	prompt = request.args['prompt']
 	prompt = prompt.replace("%20", " ")
-	print("attempting summary generation:",prompt)
+	# print("attempting summary generation:",prompt)
 
-	inputs = summary_tokenizer("summarize: " + prompt, return_tensors="tf", max_length=20)
-	outputs = summary_model.generate(inputs["input_ids"], max_length=30, min_length=10, length_penalty=2.0, num_beams=2, early_stopping=True)
-	result = summary_tokenizer.decode(outputs[0], skip_special_tokens=True)
-	print("result:",result)
+	result = summary_maker(prompt, max_length=40, min_length=30, do_sample=True)[0]['summary_text']
+	# inputs = summary_tokenizer("summarize: " + prompt, return_tensors="tf", max_length=40, truncation=True)
+	# print("input tensors", inputs)
+	# outputs = summary_model.generate(inputs["input_ids"], max_length=80, min_length=50, length_penalty=2.0, num_beams=1, early_stopping=True)
+	# print("output tensors", outputs)
+	# result = summary_tokenizer.decode(outputs[0], skip_special_tokens=True)
+	# print("result:",result)
 
 	return jsonify(result)
 
@@ -54,7 +64,7 @@ def sentiment():
 	res_val = result['score']
 	if (result['label'] == 'NEGATIVE'):
 		res_val *= -1
-	res2_val = result2['score']
+	res_val2 = result2['score']
 	if (result2['label'] == 'NEGATIVE'):
 		res_val2 *= -1
 
@@ -63,7 +73,7 @@ def sentiment():
 
 @app.route('/checkparaphrase', methods=['GET'])
 def paraphrase():
-	prompt = request.args['prompt']
+	prompt = request.args['prompt1']
 	prompt = prompt.replace("%20", " ")
 	prompt2 = request.args['prompt2']
 	prompt2 = prompt2.replace("%20", " ")
@@ -79,9 +89,20 @@ def paraphrase():
 
 @app.route('/gpt2', methods=['GET'])
 def gpt2gen():
+	if 'timestamp' in request.args:
+		if datetime.now().timestamp() - int(request.args['timestamp']) > 150000:
+			return
+
 	prompt = request.args['prompt']
 	prompt = prompt.replace("%20", " ")
-	print("attempting summary generation: " + prompt)
+	# print("attempting summary generation: " + prompt)
+
+	set_seed(int(round(datetime.now().timestamp())))
+
+	result = gpt_model(prompt, max_length=80, num_return_sequences=1)[0]['generated_text']
+	result = summary_maker(prompt, max_length=30, min_length=20, do_sample=True)[0]['summary_text']
+	# print("result:",result)
+	return jsonify(result)
 
 
 if __name__ == '__main__':

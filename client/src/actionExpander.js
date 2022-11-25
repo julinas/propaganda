@@ -5,6 +5,7 @@ function selectRandom(array) {
 }
 
 onmessage = (e) => {
+	console.log("inside actionExpander");
 	if (e.data.action == 'praise') {
 		if (e.data.event != null) {
 			let event = e.data.event;
@@ -101,5 +102,8 @@ onmessage = (e) => {
 		else {
 			console.log("should probably make a 'action not allowed' sound");
 		}		
+	}
+	else {
+		console.log('unaccounted for action: ' + e.data.action);
 	}
 }

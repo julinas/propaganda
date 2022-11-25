@@ -41,7 +41,7 @@ function tryCreateRationingEvent() {
 		let rationAmount = (6-intensity)/6*rationTotal;
 		let seed = Date.now();
 
-		let text = seed + " " + rationableItem + " will now be rationed to " + rationAmount + " " + rationUnit + " per person per week in " + location;
+		let text = rationableItem + " will now be rationed to " + rationAmount + " " + rationUnit + " per person per week in " + location;
 
 		const data = {
 			event: {
@@ -63,7 +63,7 @@ function tryCreateProtestEvent() {
 		let location = selectRandom(realCityNames);
 		let intensity = leftPeakIntensity();
 		let seed = Date.now();
-		let text = seed + " acts of protest in " + location;
+		let text = " acts of protest in " + location;
 
 		const data = {
 			event: {
@@ -81,7 +81,7 @@ function tryCreateProtestEvent() {
 function tryCreateEvent(generatorID) {
 	let rand = Math.random();
 
-	if (rand <= 0.2) { // natural disasters somewhere every 3 days
+	if (rand <= 0.3) { // natural disasters somewhere every 3 days
 		let eventType = 'natural disaster';
 		let disasterType = selectRandom(naturalDisaster);
 		let intensity = leftPeakIntensity();  // 6 levels of disaster
@@ -89,7 +89,7 @@ function tryCreateEvent(generatorID) {
 		let location = selectRandom(realCityNames);
 		let seed = Date.now();
 
-		let text = seed + " " + disasterType + " in " + location + ". It is a " + intensityWord;
+		let text = disasterType + " in " + location + ". It is a " + intensityWord;
 
 		if (Math.random() > 0.5) {
 			let monetaryDamage = moneyLostArray[Math.floor(intensity)];
@@ -114,7 +114,7 @@ function tryCreateEvent(generatorID) {
 		}
 		postMessage(data);
 	}
-	else if (rand <= 0.4) { // corruption 
+	else if (rand <= 0.6) { // corruption 
 		let eventType = 'corruption';
 		let corruptionType = selectRandom(corruptionTypes);
 		let corruptionType2;
@@ -123,7 +123,7 @@ function tryCreateEvent(generatorID) {
 		let location = selectRandom(realCityNames);
 		let seed = Date.now();
 
-		let text = seed + " " + corruptionType + " in " + location;
+		let text = corruptionType + " in " + location;
 
 		if (Math.random() > 0.5) {
 			let corruptionType2 = selectRandom(corruptionTypes);
@@ -160,7 +160,7 @@ function tryCreateEvent(generatorID) {
 		}
 		postMessage(data);
 	}
-	else if (rand <= 0.6) { // egregious crimes 
+	else if (rand <= 0.9) { // egregious crimes 
 		let eventType = 'crime';
 		let crimeType = selectRandom(crimeTypes);
 		let crimeTarget = selectRandom(crimeTargets);
@@ -169,7 +169,7 @@ function tryCreateEvent(generatorID) {
 		let location = selectRandom(realCityNames);
 		let seed = Date.now();
 
-		let text = seed + " " + crimeType + " against " + crimeTarget + " in " + location;
+		let text = crimeType + " against " + crimeTarget + " in " + location;
 
 		const data = {
 			event: {
@@ -185,14 +185,14 @@ function tryCreateEvent(generatorID) {
 		postMessage(data);
 
 	}
-	else if (rand <= 0.65) { // government actions // rationing is a government action, but is triggered rather than a background event
+	else if (rand <= 0.99) { // government actions // rationing is a government action, but is triggered rather than a background event
 		// taxes are raised
 
 		let eventType = 'government action';
 		let intensity = leftPeakIntensity();
 		let location = selectRandom(realCityNames);
 		let seed = Date.now();
-		let text = seed + " " + "taxes are raised in " + location + " by " + intensity + "%";
+		let text = "taxes are raised in " + location + " by " + intensity + "%";
 		const data = {
 			event: {
 				text: text,
@@ -225,9 +225,10 @@ function tryCreateEvent(generatorID) {
 
 onmessage = (e) => {
 	if (e.data.command == 'unpause') {
+		tryCreateEvent(null);
 		let ID = setInterval(() => {
 			tryCreateEvent(ID);
-		}, Math.ceil(10000 / e.data.timerSpeed))
+		}, Math.ceil(30000 / e.data.timerSpeed))
 	} 
 	else if (e.data.command == 'pause') {
 		clearInterval(e.data.ID);

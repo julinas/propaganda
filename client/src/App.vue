@@ -44,39 +44,7 @@
         timerSpeed: 1,
         day: 1,
         recentEvents: new Array(null, null, null, null, null, null),
-        recentPosts: new Array({
-          'sourceType': 'official',
-          'sourceName': 'Official News',
-          'postText': 'Test string'
-        }, {
-          'sourceType': 'people',
-          'sourceName': 'Anonymous',
-          'postText': 'Test string #2'
-        }, {
-          'sourceType': 'people',
-          'sourceName': 'Anonymous',
-          'postText': 'Test string #2'
-        }, {
-          'sourceType': 'people',
-          'sourceName': 'Anonymous',
-          'postText': 'Test string #2'
-        }, {
-          'sourceType': 'people',
-          'sourceName': 'Anonymous',
-          'postText': 'Test string #2'
-        }, {
-          'sourceType': 'people',
-          'sourceName': 'Anonymous',
-          'postText': 'Test string #2'
-        }, {
-          'sourceType': 'people',
-          'sourceName': 'Anonymous',
-          'postText': 'Test string #2'
-        }, {
-          'sourceType': 'people',
-          'sourceName': 'Anonymous',
-          'postText': 'Test string #2'
-        }),
+        recentPosts: new Array(null, null, null, null, null, null),
         archivedEvents: new Array(),
         activeEvents: new Object(), // can be updated with "no response from gov" (NOT what's visible via recent events)
         worldEventGeneratorID: null,
@@ -129,13 +97,14 @@
         },
         doAction(actionName) {
           let applyToEvent = null;
+          console.log("in do action " + actionName)
           for (let recentEvent of this.recentEvents) {
-            if (recentEvent == null) {
-              break;
-            }
-            if (recentEvent.timestamp && recentEvent.timestamp in this.activeEvents) {
+            console.log(recentEvent);
+            if (recentEvent != null && recentEvent.timestamp && recentEvent.timestamp in this.activeEvents) {
               applyToEvent = recentEvent;
-              delete this.activeEvents[recentEvent.timestamp]
+              //delete this.activeEvents[recentEvent.timestamp]
+              //applyToEvent[actionName] = true;
+
 
               let location = recentEvent.location;
               let actionText;
@@ -160,7 +129,7 @@
           }
           actionExpander.postMessage({
             action: actionName,
-            applyToEvent: applyToEvent
+            applyToEvent: JSON.stringify(applyToEvent)
           })
         },
         doWhenTogglePause() {
@@ -199,19 +168,28 @@
             interpretation = " and what has the government done?";
           }
           let prompt = event.text + interpretation;
+          let copied_event = event;
           let escaped_prompt = prompt.replace(/ /g, '%20');
-          const path = 'http://127.0.0.1:5000/summary?prompt=' + escaped_prompt;
+          let timestamp = Date.now();
+          const path = 'http://127.0.0.1:5000/gpt2?prompt=' + escaped_prompt + '&timestamp=' + timestamp;
           axios.get(path)
             .then((res) => { // TODO: "lock" recent event in gray, if still in recent events
-              if (event.timestamp in this.activeEvents) {
-                event.text = res.data; //TODO hiding for now to do other things
-                event.text = event.text.split(event.location).join(cityNames[event.location]);
-                event.accessed = true;
-                event.accessedBy = "people";
-                event.accessTime = Date.now();
-                this.archivedEvents.push(event);
-                delete this.activeEvents[event.timestamp];
-                this.forwardEventToPeople(event);
+              if (res.data != null) {
+                if (event.timestamp in this.activeEvents) {
+                  for (let recentEvent in this.recentEvents) {
+                    if (recentEvent.timestamp == event.timestamp) {
+                      recentEvent.locked = true;
+                    }
+                  }
+                  copied_event.text = res.data; //TODO hiding for now to do other things
+                  copied_event.text = copied_event.text.split(copied_event.location).join(cityNames[copied_event.location]);
+                  copied_event.accessed = true;
+                  copied_event.accessedBy = "people";
+                  copied_event.accessTime = Date.now();
+                  this.archivedEvents.push(copied_event);
+                  delete this.activeEvents[copied_event.timestamp];
+                  this.forwardEventToPeople(copied_event);
+                }
               }
             })
             .catch((error) => {
@@ -219,32 +197,48 @@
             });
         },
         forwardEventToNewsBoard(event) {
-          console.log("should update to news board ");
-          console.log(event);
+          if (event.accessed == false) {
+            console.log('event should always be accessed before news board');
+          }
+
+          let sourceName = 'Anonymous';
+          if (event.accessedBy == 'official') {
+            sourceName = 'Official News';
+          }
+
+          this.recentPosts.push(
+          {
+            'sourceType': event.accessedBy,
+            'sourceName': sourceName,
+            'postText': event.text
+          });
+          this.recentPosts.shift();
         }
     },
     mounted() {
       eventGenerator.onmessage = (e) => {
-        console.log(e.data.event);
         if (this.worldEventGeneratorID == null && 'generatorID' in e.data) {
           this.worldEventGeneratorID = e.data.generatorID;
         }
         if (e.data.event.eventType == 'nothing') {
-            this.recentEvents.push(e.data.event);
-            this.recentEvents.shift();
+            //this.recentEvents.push(e.data.event);
+            //this.recentEvents.shift();
         }
         else {
           let escaped_prompt = e.data.event.text.replace(/ /g, '%20');
-          const path = 'http://127.0.0.1:5000/summary?prompt=' + escaped_prompt;
+          let timestamp = Date.now();
+          const path = 'http://127.0.0.1:5000/gpt2?prompt=' + escaped_prompt + '&timestamp=' + timestamp;
           axios.get(path)
             .then((res) => {
-              e.data.event.text = res.data; //TODO hiding for now to do other things
-              e.data.event.text = e.data.event.text.split(e.data.event.location).join(cityNames[e.data.event.location]);
-              this.activeEvents[e.data.event.timestamp] = e.data.event;
-              this.recentEvents.push(e.data.event);
-              this.recentEvents.shift();
-              this.forwardEventToPeople(e.data.event);
-              this.forwardEventToTime(e.data.event);
+              if (res.data != null) { 
+                e.data.event.text = res.data; //TODO hiding for now to do other things
+                // e.data.event.text = e.data.event.text.split(e.data.event.location).join(cityNames[e.data.event.location]);
+                this.activeEvents[e.data.event.timestamp] = e.data.event;
+                this.recentEvents.push(e.data.event);
+                this.recentEvents.shift();
+                this.forwardEventToPeople(e.data.event);
+                this.forwardEventToTime(e.data.event);
+              }
             })
             .catch((error) => {
               console.error(error);
@@ -255,23 +249,32 @@
         if (e.data.event.needGen == true) {
           // generate/expand new text; old text was already generated/expanded
           let escaped_prompt = e.data.event.text.replace(/ /g, '%20'); 
-          let path = 'http://127.0.0.1:5000/summary?prompt=' + escaped_prompt;
+          let path = 'http://127.0.0.1:5000/gpt2?prompt=' + escaped_prompt;
           axios.get(path) // get gen text for expanded action
             .then((res) => {
               event.text = res.data; // TODO hiding for now to do other things
 
               let escaped_old_text = e.data.event.old_text.replace(/ /g, '%20'); 
               let escaped_new_text = e.data.event.text.replace(/ /g, '%20'); 
-              let path = 'https://127.0.0.1:5000/sentimentanalysis?prompt1=' + escaped_old_text + '&prompt2=' + escaped_new_text;
+              let path = 'http://127.0.0.1:5000/sentimentanalysis?prompt1=' + escaped_old_text + '&prompt2=' + escaped_new_text;
               axios.get(path) // get sentiments for both new and old texts
                 .then((res) => {
                   event.old_sentiment = res.data[0];
                   event.new_sentiment = res.data[1];
                   console.log('received sentiment analysis ' + event.old_sentiment + " " + event.new_sentiment);
 
-                  event.text = event.text.split(event.location).join(cityNames[event.location]);
-                  this.archivedEvents.push(event);
-                  this.forwardEventToPeople(event);
+                  let path = 'http://127.0.0.1:5000/checkparaphrase?prompt1=' + escaped_old_text + '&prompt2=' + escaped_new_text;
+                  axios.get(path) // check how different the two phrases are from each other
+                    .then((res) => {
+                      event.not_paraphrase = res.data; // should correlate to suspicions raised
+                      console.log('received paraphrase classification ' + event.not_paraphrase);
+                        // event.text = event.text.split(event.location).join(cityNames[event.location]);
+                        this.archivedEvents.push(event);
+                        this.forwardEventToPeople(event);
+                    })
+                    .catch((error) => {
+                      console.error(error);
+                    })
                 })
                 .catch((error) => {
                   console.error(error);

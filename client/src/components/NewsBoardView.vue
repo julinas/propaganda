@@ -7,6 +7,7 @@
 
   <div class="newsboard" v-if="started">
     <h3>News Board</h3>
+    <div v-if="!recentPosts[0]">No one's posted anything yet.</div>
     <div :class="recentPosts[0]['sourceType']" v-if="recentPosts[0]">
       <div class="header-container">
         <div class="header">
@@ -65,26 +66,6 @@
         </div>
       </div>
       <div class="text">{{recentPosts[5]['postText']}}</div>
-    </div>
-
-    <div :class="recentPosts[6]['sourceType']" v-if="recentPosts[6]">
-      <div class="header-container">
-        <div class="header">
-          <p class="icon" :style="headerIconStyle(recentPosts[6]['sourceType'])"></p>
-          <span class="title">{{recentPosts[6]['sourceName']}}</span>
-        </div>
-      </div>
-      <div class="text">{{recentPosts[6]['postText']}}</div>
-    </div>
-
-    <div :class="recentPosts[7]['sourceType']" v-if="recentPosts[7]">
-      <div class="header-container">
-        <div class="header">
-          <p class="icon" :style="headerIconStyle(recentPosts[7]['sourceType'])"></p>
-          <span class="title">{{recentPosts[7]['sourceName']}}</span>
-        </div>
-      </div>
-      <div class="text">{{recentPosts[7]['postText']}}</div>
     </div>
 
   </div>
@@ -154,6 +135,7 @@
     margin-top: -1vh;   
     text-align: left;
     margin-left: 6vw;
+    margin-right: 2vw;
     font-size: 1.5vh;
   }
 
